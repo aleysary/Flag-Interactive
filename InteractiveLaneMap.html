@@ -1,0 +1,214 @@
+
+# Full HTML code with Leaflet attribution removed and replaced with © aleysary custom label
+custom_html = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Interactive Flag Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #0f0f0f;
+      overflow: hidden;
+    }
+    #map {
+      height: 100vh;
+      width: 100vw;
+      position: relative;
+    }
+
+    .insta-label {
+      backdrop-filter: blur(8px);
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 14px;
+      font-size: 12px;
+      font-weight: 500;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+      white-space: nowrap;
+      pointer-events: auto;
+      transform: scale(1);
+      position: relative;
+      z-index: 999;
+      transition: all 0.2s ease;
+    }
+
+    .insta-label:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.2);
+      z-index: 10000;
+    }
+
+    .polygon-overlay {
+      position: absolute;
+      cursor: pointer;
+    }
+
+    #image-container {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      width: 360px;
+      height: 270px;
+      background-image: url('52FD13E5-B30F-42EE-AD85-0B2E9C3F7BF1.jpeg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      transition: transform 0.3s ease;
+      z-index: 9999;
+    }
+
+    #image-container:hover {
+      transform: scale(1.03);
+    }
+
+    .leaflet-control-attribution {
+      display: none !important;
+    }
+
+    #custom-attribution {
+      position: absolute;
+      bottom: 8px;
+      right: 12px;
+      font-size: 12px;
+      color: #999;
+      background: rgba(0,0,0,0.4);
+      padding: 4px 8px;
+      border-radius: 8px;
+      z-index: 9999;
+      font-family: sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="image-container"></div>
+  <div id="custom-attribution">© aleysary</div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    const countryCoords = {
+      "Luxembourg": [49.6117, 6.1319],
+      "Greece": [37.9838, 23.7275],
+      "Thailand": [13.7563, 100.5018],
+      "Zambia": [-15.3875, 28.3228],
+      "Turkey": [39.9208, 32.8541],
+      "India": [28.6139, 77.2090],
+      "Nigeria": [9.0579, 7.4951],
+      "United Kingdom": [51.5072, -0.1276],
+      "Spain": [40.4168, -3.7038],
+      "Iran": [35.6892, 51.3890],
+      "Croatia": [45.8150, 15.9819]
+    };
+
+    const countryFacts = {
+      "Luxembourg": "Luxembourg is one of the world's smallest countries, but one of the richest per capita.",
+      "Greece": "Greece is the birthplace of democracy and the Olympic Games.",
+      "Thailand": "Thailand is the only Southeast Asian country never colonized by a European power.",
+      "Zambia": "Zambia is home to Victoria Falls, one of the largest waterfalls in the world.",
+      "Turkey": "Istanbul is the only city in the world located on two continents.",
+      "India": "India is the world’s largest democracy with over 1.4 billion people.",
+      "Nigeria": "Nigeria is Africa’s most populous country and a major film industry hub (Nollywood).",
+      "United Kingdom": "The UK once ruled over a quarter of the world’s population during the British Empire.",
+      "Spain": "Spain is home to the world’s oldest restaurant, Sobrino de Botín, opened in 1725.",
+      "Iran": "Iran was once known as Persia and has one of the oldest continuous civilizations.",
+      "Croatia": "Croatia’s Dalmatian coast inspired the name of the Dalmatian dog breed."
+    };
+
+    const polygons = [
+      { country: "Luxembourg", coords: "296,536,417,581,399,805,251,851" },
+      { country: "Greece", coords: "418,578,467,547,437,780,402,801,407,697" },
+      { country: "Thailand", coords: "468,536,494,528,528,533,522,579,513,673,513,723,514,757,464,780,444,790" },
+      { country: "Zambia", coords: "536,531,566,529,597,529,630,533,638,544,628,612,626,645,616,693,608,767,596,784,537,772,512,763" },
+      { country: "Turkey", coords: "647,544,729,586,711,802,711,811,640,794" },
+      { country: "India", coords: "737,582,814,552,803,798,725,818,735,589" },
+      { country: "Nigeria", coords: "818,545,849,533,920,537,915,631,923,759,868,786,829,794" },
+      { country: "United Kingdom", coords: "928,536,967,537,988,548,992,688,991,787,959,777,931,769,923,764" },
+      { country: "Spain", coords: "995,551,1029,577,1046,586,1054,619,1056,645,1061,710,1065,735,1067,763,1067,786,1067,813,1068,824,1045,817,1012,806" },
+      { country: "Iran", coords: "1054,590,1114,571,1166,555,1172,710,1185,767,1191,807,1149,810,1125,815,1098,820,1073,817" },
+      { country: "Croatia", coords: "1183,550,1225,544,1316,544,1339,611,1357,699,1377,771,1225,807" }
+    ];
+
+    const map = L.map('map', {
+      minZoom: 2,
+      maxZoom: 5,
+      zoomSnap: 0.25,
+      worldCopyJump: false,
+      maxBounds: [[-85, -180], [85, 180]],
+      maxBoundsViscosity: 1.0
+    }).setView([20, 0], 2);
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      maxZoom: 19
+    }).addTo(map);
+
+    Object.entries(countryCoords).forEach(([country, coords]) => {
+      const fact = countryFacts[country] || "No fact available.";
+      const marker = L.marker(coords, {
+        icon: L.divIcon({
+          className: '',
+          html: `<div class="insta-label">${country}</div>`,
+          iconSize: null
+        })
+      }).addTo(map);
+
+      marker.on('mouseover', () => marker.setZIndexOffset(1000));
+      marker.on('mouseout', () => marker.setZIndexOffset(0));
+
+      marker.on('click', () => {
+        map.flyTo(coords, 5, { animate: true, duration: 1.5 });
+        marker.bindPopup(`<strong>${country}</strong><br>${fact}`).openPopup();
+      });
+    });
+
+    const container = document.getElementById("image-container");
+    const imgWidth = 1536, imgHeight = 1152;
+    const scale = 360 / imgWidth;
+
+    polygons.forEach(({ country, coords }) => {
+      const points = coords.split(",").map(Number);
+      const scaledPoints = [];
+
+      for (let i = 0; i < points.length; i += 2) {
+        const x = points[i] * scale;
+        const y = points[i + 1] * scale;
+        scaledPoints.push(`${x}px ${y}px`);
+      }
+
+      const div = document.createElement("div");
+      div.className = "polygon-overlay";
+      div.style.width = `${imgWidth * scale}px`;
+      div.style.height = `${imgHeight * scale}px`;
+      div.style.clipPath = `polygon(${scaledPoints.join(",")})`;
+      div.title = country;
+      div.style.top = 0;
+      div.style.left = 0;
+
+      div.addEventListener("click", () => {
+        const target = countryCoords[country];
+        const fact = countryFacts[country] || "No fact available.";
+        if (target) {
+          map.flyTo(target, 5, { animate: true, duration: 1.5 });
+          L.popup({ offset: [0, -10] })
+            .setLatLng(target)
+            .setContent(`<strong>${country}</strong><br>${fact}`)
+            .openOn(map);
+        }
+      });
+
+      container.appendChild(div);
+    });
+  </script>
+</body>
+</html>
